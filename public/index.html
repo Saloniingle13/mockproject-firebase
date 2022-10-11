@@ -1,43 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    img {
+      width: 200px;
+      height: 200px;
+      border: 2px black solid;
+    }
+  </style>
+</head>
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+<body>
+  <label>Image </label><input type="text" id="namebox" /><label id="extlab"></label>
+  <br><br>
+  <img id="myimg"><label id="upprogress"></label><br><br>
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+
+  <button id="setbtn">Select Image</button>
+  <button id="upbtn">Upload Image</button>
+  <button id="downbtn">Retrieve Image</button>
+
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-app.js";
+    // import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-analytics.js";
+
+
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB4hGZSCXvveDBy5F2i3hLix0kaFzKdZHo",
+      authDomain: "mock-project-6f30d.firebaseapp.com",
+      projectId: "mock-project-6f30d",
+      storageBucket: "mock-project-6f30d.appspot.com",
+      messagingSenderId: "944013406889",
+      appId: "1:944013406889:web:1fe1ca9103fb4e676eafb8",
+      measurementId: "G-8V8G3V57WN"
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+    //const analytics = getAnalytics(app);
+
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-storage.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-firestore.js";
+    const clouddb = getFirestore();
+
+
+    var files = [];
+    var reader = new FileReader();
+
+    var namebox = document.getElementById("namebox");
+    var extlab = document.getElementById("extlab");
+    var myimg = document.getElementById("myimg");
+    var proglab = document.getElementById("upprogress");
+    var SelBtn = document.getElementById("setbtn");
+    var UpBtn = document.getElementById("upbtn");
+    var DownBtn = document.getElementById("downbtn");
+
+    var input = document.createElement("input");
+    input.type = "file";
+    input.onchange = e => {
+      files = e.target.files;
+      var extension = GetFileExt(files[0]);
+      var name = GetFileName(files[0]);
+      console.log(name)
+      namebox.value = name;
+      extlab.innerHTML = extension;
+
+      reader.readAsDataURL(files[0]);
+    }
+    reader.onload = function () {
+      myimg.src = reader.result;
+    }
+
+    SelBtn.onclick = function () {
+      input.click();
+    }
+
+    function GetFileExt(file) {
+      var temp = file.name.split('.');
+      var ext = temp.slice((temp.length - 1), (temp.length));
+      return '.' + ext[0];
+    }
+
+    function GetFileName(file) {
+      var temp = file.name.split('.');
+      var name = temp.slice(0, -1).join('.');
+      return name;
+    }
+
+    async function UploadProcess(file) {
+      var ImgToUpload = file[0];
+      var ImgName = namebox.value + extlab.innerHTML;
+
+      const metaData = {
+        contentType: ImgToUpload.type
+      }
+      const storage = getStorage(app);
+
+      const storageRef = ref(storage, "Images/" + ImgName);
+      const uploadTask = uploadBytesResumable(storageRef, ImgToUpload, metaData);
+
+      uploadTask.on('state_changed', (snapshot) => {
+        console.log("test");
+      },
+        (error) => {
+          alert("image not uploaded");
+        }, () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            SaveURLtoFirestore(downloadURL);
+          });
+        });
+
+    }
+
+    async function SaveURLtoFirestore(url) {
+      var name = namebox.value;
+      var ext = extlab.innerHTML;
+
+
+      var ref = doc(clouddb, "ImageLinks/" + name);
+
+      await setDoc(ref, {
+        ImageName: (name + ext),
+        ImageURL: url
+
+      });
+    }
+    UpBtn.onclick = function () {
+      UploadProcess(files);
+    }
+
+  </script>
+
+</body>
+
 </html>
